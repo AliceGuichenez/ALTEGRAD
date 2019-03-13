@@ -1,18 +1,9 @@
-import os
-import re
 import random
 import numpy as np
 import networkx as nx
 from time import time
 
 # = = = = = = = = = = = = = = = 
-
-# 'atoi' and 'natural_keys' taken from: https://stackoverflow.com/questions/5967500/how-to-correctly-sort-a-string-with-a-number-inside
-def atoi(text):
-    return int(text) if text.isdigit() else text
-
-def natural_keys(text):
-    return [atoi(c) for c in re.split('(\d+)', text)]
 
 def random_walk(graph,node,walk_length):
     walk = [node]
@@ -23,9 +14,8 @@ def random_walk(graph,node,walk_length):
 
 # modif 3
 # change those values
-q = 1.2
-p = np.random.uniform(min(q,1)-0.3, max(q,1)+0.3)
-def compute_probabilities(graph):
+
+def compute_probabilities(graph, p, q):
     probs = {}
     for source_node in graph.nodes():
         probs[source_node] = {}
@@ -54,7 +44,7 @@ def biased_walk(graph, node, walk_length, probs):
     return walk
 
 # modif 3
-def generate_walks(graph,num_walks,walk_length,biased=False):
+def generate_walks(graph, num_walks, walk_length, biased=False, p = None, q = None):
     '''
     samples num_walks walks of length walk_length+1 from each node of graph
     '''
@@ -73,7 +63,7 @@ def generate_walks(graph,num_walks,walk_length,biased=False):
         n_nodes = len(graph_nodes)
         walks = []
         #print("compute prob..")
-        probs = compute_probabilities(graph)
+        probs = compute_probabilities(graph, p, q)
         #print("compute walks..")
         for i in range(num_walks):
             nodes = np.random.permutation(graph_nodes)
@@ -91,41 +81,65 @@ num_walks = 5
 walk_length = 10
 max_doc_size = 70 # maximum number of 'sentences' (walks) in each pseudo-document
 
-path_root = '..'
-path_to_data = path_root + '/data/'
+# = = = = = = = = = = = = = = =
+import GraphData as data
+
+
+
+start_time = time() 
+q = 1.2
+p = np.random.uniform(min(q,1)-0.3, max(q,1)+0.3)
+docs = []
+idxs, edgelists = data.get_graphs(N_train = 105, test = False)
+N = len(idxs)
+for i, edgelist in enumerate(edgelists):
+    g = nx.read_edgelist(edgelist) # construct graph from edgelist
+    doc = generate_walks(g,num_walks,walk_length, biased=False, p =p , q=q) # create the pseudo-document representation of the graph
+    docs.append(doc)
+    if i % 50 == 0:
+        print("Computing graph {}/{}...".format(i+1, N).ljust(10), end = "\r")
+
+print('documents generated')
+
+# truncation-padding at the document level, i.e., adding or removing entire 'sentences'
+docs = [d+[[pad_vec_idx]*(walk_length+1)]*(max_doc_size-len(d)) if len(d)<max_doc_size else d[:max_doc_size] for d in docs] 
+
+docs = np.array(docs).astype('int')
+print('document array shape:',docs.shape) # (93719, 70, 11)
+
+#data.save_docs(idxs, docs, name = "small_biased")a[0]
+
+print('documents saved')
+print('everything done in', round(time() - start_time,2)) # 471.33
 
 # = = = = = = = = = = = = = = =
 
-def main():
 
-    start_time = time() 
 
-    edgelists = os.listdir(path_to_data + 'edge_lists/')
-    edgelists.sort(key=natural_keys) # important to maintain alignment with the targets!
 
-    docs = []
-    N = len(edgelists)
-    for idx,edgelist in enumerate(edgelists):
-        g = nx.read_edgelist(path_to_data + 'edge_lists/' + edgelist) # construct graph from edgelist
-        doc = generate_walks(g,num_walks,walk_length, biased=True) # create the pseudo-document representation of the graph
-        docs.append(doc)
-        if idx % 50 == 0:
-            print("Computing graph {}/{}...".format(idx+1, N).ljust(10), end = "\r")
 
-    print('documents generated')
-    
-    # truncation-padding at the document level, i.e., adding or removing entire 'sentences'
-    docs = [d+[[pad_vec_idx]*(walk_length+1)]*(max_doc_size-len(d)) if len(d)<max_doc_size else d[:max_doc_size] for d in docs] 
 
-    docs = np.array(docs).astype('int')
-    print('document array shape:',docs.shape) # (93719, 70, 11)
 
-    np.save(path_to_data + 'documents_biased.npy', docs, allow_pickle=False)
 
-    print('documents saved')
-    print('everything done in', round(time() - start_time,2)) # 471.33
 
-# = = = = = = = = = = = = = = =
 
-if __name__ == '__main__':
-    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
