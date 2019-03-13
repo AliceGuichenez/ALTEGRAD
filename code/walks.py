@@ -34,16 +34,16 @@ def compute_probabilities(graph, p, q):
 def biased_walk(graph, node, walk_length, probs):
     '''Return a biased random walk with probabilities in probs'''
     walk = [node]
-    walk_options = list(graph[node])
-    walk.append(random.choice(walk_options))
+    neighbors = list(graph.neighbors(walk[-1]))
+    walk.append(random.choice(neighbors))
     for i in range(walk_length-1):
-        walk_options = list(graph[walk[-1]])
+        neighbors = list(graph.neighbors(walk[-1]))
         probabilities = probs[walk[-2]][walk[-1]]
-        walk.append(np.random.choice(walk_options, p=probabilities))
+        walk.append(np.random.choice(neighbors, p=probabilities))
     return walk
 
 
-def generate_walks(graph, num_walks, walk_length, biased = False, p = None, q = None):
+def generate_walks(graph, num_walks, walk_length, max_doc_size, padding_filler, biased = False, p = None, q = None):
     '''samples num_walks walks of length walk_length+1 from each node of graph'''
     # Set the generator of walk (biased or not)
     if biased:
@@ -54,11 +54,18 @@ def generate_walks(graph, num_walks, walk_length, biased = False, p = None, q = 
     
     # Generate walk for each node
     graph_nodes = graph.nodes()
-    n_nodes = len(graph_nodes)
-    walks = []
-    for i in range(num_walks):
+    walks = np.empty((max_doc_size, walk_length + 1), dtype = np.int)
+    walks.fill(padding_filler)
+    
+    i = 0
+    for _ in range(num_walks):
         nodes = np.random.permutation(graph_nodes)
-        for j in range(n_nodes):
-            walk = generator(graph, nodes[j], walk_length)
-            walks.append(walk)
+        for node in nodes:
+            walk = generator(graph, node, walk_length)
+            walks[i] = np.array(walk, dtype = np.int)
+            i += 1
+            if max_doc_size <= i:
+                break
+        if max_doc_size <= i:
+            break
     return walks

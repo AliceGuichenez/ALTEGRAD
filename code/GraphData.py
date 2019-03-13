@@ -93,6 +93,11 @@ def get_dataset(name):
     target = get_target(idxs) #Get the target for the docs
     return docs, target
 
+def get_kaggle_docs(name):
+    idxs, docs = get_docs(name) # Load the raw docs
+    idxs, docs = remove_idxs(idxs, docs, get_train_idxs()) # Remove the test docs as we do not have the target for them
+    return docs[np.argsort(idxs), :, :] # Sorting to get the Kaggle order
+    
 
 def get_target(idxs = None):
     '''Return the multiple target as a dataframe with the index of the train graph. It is stored in cache.
@@ -127,9 +132,9 @@ def get_graphs(N_train = None, test = False):
     '''Generate a list of graph with N_train graph picked randomly from the train dataset
        If test is set to true it adds the test graphs.
        It is usefull if you want to only work on a small portion of the train dataset
-       Return idxs, graph_path'''
+       Return idxs, graph_path'''       
     # Pick random edges from train
-    idxs = list(np.random.choice(get_train_idxs(), size = N_train, replace = False))
+    idxs = list(np.random.choice(get_train_idxs(), size = N_train, replace = False)) if not(N_train is None) else get_train_idxs()
     
     if test:
         idxs += get_test_idxs() 
