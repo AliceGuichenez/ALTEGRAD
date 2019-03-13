@@ -44,10 +44,12 @@ num_walks = 5
 walk_length = 10
 max_doc_size = 70 # maximum number of 'sentences' (walks) in each pseudo-document
 
-path_root = '/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/for_kaggle_final'
+path_root = ".."
 path_to_data = path_root + '/data/'
 
 # = = = = = = = = = = = = = = =
+
+docs = np.load(path_to_data + 'documents.npy')
 
 def main():
 
@@ -71,12 +73,12 @@ def main():
     docs = [d+[[pad_vec_idx]*(walk_length+1)]*(max_doc_size-len(d)) if len(d)<max_doc_size else d[:max_doc_size] for d in docs] 
 
     docs = np.array(docs).astype('int')
-    print('document array shape:',docs.shape) # (93719, 70, 11)
+    print('document array shape:',docs.shape)
 
     np.save(path_to_data + 'documents.npy', docs, allow_pickle=False)
 
     print('documents saved')
-    print('everything done in', round(time() - start_time,2)) # 471.33
+    print('everything done in', round(time() - start_time,2))
 
 # = = = = = = = = = = = = = = =
 

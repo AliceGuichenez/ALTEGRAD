@@ -1,19 +1,22 @@
 import sys
 import json
 import numpy as np
+import time
+import datetime
 
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from keras.models import Model
 from keras.layers import Input, Embedding, Dropout, Bidirectional, GRU, CuDNNGRU, TimeDistributed, Dense
+from keras import optimizers
 
 # = = = = = = = = = = = = = = =
 
-is_GPU = False
+is_GPU = True
 save_weights = True
 save_history = True
 
-path_root = '/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/for_kaggle_final'
+path_root = '../'
 path_to_code = path_root + '/code/'
 path_to_data = path_root + '/data/'
 
@@ -45,15 +48,107 @@ def bidir_gru(my_seq,n_units,is_GPU):
                                  recurrent_activation='sigmoid'),
                              merge_mode='concat', weights=None)(my_seq)
 
+    
 
-# = = = = = hyper-parameters = = = = =
 
-n_units = 50
-drop_rate = 0.5
-batch_size = 96
-nb_epochs = 10
-my_optimizer = 'adam'
-my_patience = 4
+def run(learning_rate = 0.01, drop_rate = 0.3, batch_size = 96, n_units = 50, nb_epochs = 10, momentum = 0.9):
+    # = = = = = hyper-parameters = = = = =
+    decay_rate = learning_rate / nb_epochs
+    sgd = optimizers.Adam(lr=learning_rate, momentum=momentum, decay=decay_rate, nesterov=True)
+    my_optimizer = sgd # modif 2
+    
+    my_patience = 4
+    
+
+    
+    res = []
+    for tgt in range(4):
+    
+        with open(path_to_data + 'targets/train/target_' + str(tgt) + '.txt', 'r') as file:
+            target = file.read().splitlines()
+        
+        target_train = np.array([target[elt] for elt in idxs_select_train]).astype('float')
+        target_val = np.array([target[elt] for elt in idxs_select_val]).astype('float')
+    
+        print('data loaded')
+        #yolo.append(1)
+        #continue
+    
+        # = = = = = defining architecture = = = = =
+        
+        # = = = sentence encoder = = = 
+    
+        sent_ints = Input(shape=(docs_train.shape[2],))
+    
+        sent_wv = Embedding(input_dim=embeddings.shape[0],
+                            output_dim=embeddings.shape[1],
+                            weights=[embeddings],
+                            input_length=docs_train.shape[2],
+                            trainable=True,
+                            )(sent_ints)
+    
+        sent_wv_dr = Dropout(drop_rate)(sent_wv)
+        sent_wa = bidir_gru(sent_wv_dr,n_units,is_GPU)
+        sent_att_vec,word_att_coeffs = AttentionWithContext(return_coefficients=True)(sent_wa)
+        sent_att_vec_dr = Dropout(drop_rate)(sent_att_vec)                      
+        sent_encoder = Model(sent_ints,sent_att_vec_dr)
+        
+        # = = = document encoder = = = 
+    
+        doc_ints = Input(shape=(docs_train.shape[1],docs_train.shape[2],))
+        sent_att_vecs_dr = TimeDistributed(sent_encoder)(doc_ints)
+        doc_sa = bidir_gru(sent_att_vecs_dr,n_units,is_GPU)
+        doc_att_vec,sent_att_coeffs = AttentionWithContext(return_coefficients=True)(doc_sa)
+        doc_att_vec_dr = Dropout(drop_rate)(doc_att_vec)
+    
+        preds = Dense(units=1,
+                      activation='sigmoid')(doc_att_vec_dr)
+        model = Model(doc_ints,preds)
+    
+        model.compile(loss='mean_squared_error',
+                      optimizer=my_optimizer,
+                      metrics=['mae'])
+    
+        print('model compiled')
+    
+        # = = = = = training = = = = =
+    
+        early_stopping = EarlyStopping(monitor='val_loss',
+                                       patience=my_patience,
+                                       mode='min')
+    
+        # save model corresponding to best epoch
+        checkpointer = ModelCheckpoint(filepath=path_to_data + 'model_' + str(tgt), 
+                                       verbose=1, 
+                                       save_best_only=True,
+                                       save_weights_only=True)
+    
+        if save_weights:
+            my_callbacks = [early_stopping,checkpointer]
+        else:
+            my_callbacks = [early_stopping]
+    
+        model.fit(docs_train, 
+                  target_train,
+                  batch_size = batch_size,
+                  epochs = nb_epochs,
+                  validation_data = (docs_val,target_val),
+                  callbacks = my_callbacks)
+    
+        hist = model.history.history
+        res.append(min(hist["val_loss"]))
+    
+        if save_history:
+            with open(path_to_data + 'model_history_' + str(tgt) + '.json', 'w') as file:
+                json.dump(hist, file, sort_keys=False, indent=4)
+    
+        print('* * * * * * * target',tgt,'done * * * * * * *')    
+    return res
+    
+import pandas as pd
+import numpy as np
+
+
 
 # = = = = = data loading = = = = =
 
@@ -66,7 +161,6 @@ with open(path_to_data + 'train_idxs.txt', 'r') as file:
 train_idxs = [int(elt) for elt in train_idxs]
     
 # create validation set
-np.random.seed(12219)
 idxs_select_train = np.random.choice(range(len(train_idxs)),size=int(len(train_idxs)*0.80),replace=False)
 idxs_select_val = np.setdiff1d(range(len(train_idxs)),idxs_select_train)
 
@@ -77,78 +171,33 @@ val_idxs = [train_idxs[elt] for elt in idxs_select_val]
 docs_train = docs[train_idxs_new,:,:]
 docs_val = docs[val_idxs,:,:]
 
-for tgt in range(4):
+l_rate, drop, batch_size, n_units = 0.777003, 0.327482, 139, 82
+run(l_rate, drop, batch_size, n_units)
 
-    with open(path_to_data + 'targets/train/target_' + str(tgt) + '.txt', 'r') as file:
-        target = file.read().splitlines()
-    
-    target_train = np.array([target[elt] for elt in idxs_select_train]).astype('float')
-    target_val = np.array([target[elt] for elt in idxs_select_val]).astype('float')
 
-    print('data loaded')
 
-    # = = = = = defining architecture = = = = =
+# = = = = = Randown Search = = = = =
 
-    sent_ints = Input(shape=(docs_train.shape[2],))
+res = [] # Each run results container
+T = 0 # Total time of execution (without cooldown)
+for i_run in []:
+    # Picking random parameters
+    l_rate = np.random.uniform(0.01, 0.8)
+    drop = np.random.uniform(0.2, 0.4)
+    batch_size = int(np.random.uniform(40, 150))
+    n_units = int(np.random.uniform(30, 90))
 
-    sent_wv = Embedding(input_dim=embeddings.shape[0],
-                        output_dim=embeddings.shape[1],
-                        weights=[embeddings],
-                        input_length=docs_train.shape[2],
-                        trainable=False,
-                        )(sent_ints)
+    # Running the model and storing it
+    t0 = time.time()
+    print("########## RUN {} for : {} #############".format(i_run, (l_rate, drop, batch_size, n_units)))
+    res = run(l_rate, drop, batch_size, n_units)
+    t = time.time() - t0
+    res = [l_rate, drop, batch_size, n_units, t] + res
+    res.append(yolo)
 
-    sent_wv_dr = Dropout(drop_rate)(sent_wv)
-    sent_wa = bidir_gru(sent_wv_dr,n_units,is_GPU)
-    sent_att_vec,word_att_coeffs = AttentionWithContext(return_coefficients=True)(sent_wa)
-    sent_att_vec_dr = Dropout(drop_rate)(sent_att_vec)                      
-    sent_encoder = Model(sent_ints,sent_att_vec_dr)
-
-    doc_ints = Input(shape=(docs_train.shape[1],docs_train.shape[2],))
-    sent_att_vecs_dr = TimeDistributed(sent_encoder)(doc_ints)
-    doc_sa = bidir_gru(sent_att_vecs_dr,n_units,is_GPU)
-    doc_att_vec,sent_att_coeffs = AttentionWithContext(return_coefficients=True)(doc_sa)
-    doc_att_vec_dr = Dropout(drop_rate)(doc_att_vec)
-
-    preds = Dense(units=1,
-                  activation='sigmoid')(doc_att_vec_dr)
-    model = Model(doc_ints,preds)
-
-    model.compile(loss='mean_squared_error',
-                  optimizer=my_optimizer,
-                  metrics=['mae'])
-
-    print('model compiled')
-
-    # = = = = = training = = = = =
-
-    early_stopping = EarlyStopping(monitor='val_loss',
-                                   patience=my_patience,
-                                   mode='min')
-
-    # save model corresponding to best epoch
-    checkpointer = ModelCheckpoint(filepath=path_to_data + 'model_' + str(tgt), 
-                                   verbose=1, 
-                                   save_best_only=True,
-                                   save_weights_only=True)
-
-    if save_weights:
-        my_callbacks = [early_stopping,checkpointer]
-    else:
-        my_callbacks = [early_stopping]
-
-    model.fit(docs_train, 
-              target_train,
-              batch_size = batch_size,
-              epochs = nb_epochs,
-              validation_data = (docs_val,target_val),
-              callbacks = my_callbacks)
-
-    hist = model.history.history
-
-    if save_history:
-        with open(path_to_data + 'model_history_' + str(tgt) + '.json', 'w') as file:
-            json.dump(hist, file, sort_keys=False, indent=4)
-
-    print('* * * * * * * target',tgt,'done * * * * * * *')    
-    
+    # Saving the results at each step
+    df = pd.DataFrame(res, columns = ["l_rate", "drop", "batch_size","n_units", "T", "target0", "target1", "target2", "target3"])
+    df.to_csv("grid_search.csv")
+    T += t
+    print("################ {} minutes spent...###########".format(round(T/60)))
+    time.sleep(300) # 5 minutes cooldown for the GPU

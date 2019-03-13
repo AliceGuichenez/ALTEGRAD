@@ -9,7 +9,7 @@ from keras.layers import Input, Embedding, Dropout, Bidirectional, GRU, CuDNNGRU
 
 is_GPU = True
 
-path_root = '/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/for_kaggle_final'
+path_root = ".."
 path_to_data = path_root + '/data/'
 path_to_code = path_root + '/code/'
 sys.path.insert(0, path_to_code)
@@ -81,7 +81,6 @@ for tgt in range(4):
 
 all_preds_mean = []
 all_preds_han = []
-
 for tgt in range(4):
     
     print('* * * * * * *',tgt,'* * * * * * *')
@@ -98,7 +97,7 @@ for tgt in range(4):
     # * * * HAN * * * 
     
     # relevant hyper-parameters
-    n_units = 50
+    n_units = 82
     drop_rate = 0 # prediction mode
     
     sent_ints = Input(shape=(docs_test.shape[2],))
