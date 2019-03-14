@@ -16,9 +16,6 @@ save_weights = True
 save_history = True
     
 
-
-
-
 # = = = = = data loading = = = = =
 
 from sklearn.model_selection import train_test_split
@@ -43,14 +40,16 @@ for tgt in range(4):
     learning_rate = 0.01
     nb_epochs = 10
     momentum = 0.8
+    optimizer = 'adam'
     
+    if optimizer=='sgd':
+        decay_rate = learning_rate / nb_epochs
+        my_optimizer = optimizers.SGD(lr=learning_rate, decay=decay_rate, momentum=0.9, nesterov=True)
+    elif optimizer=='adam':
+        my_optimizer = optimizers.Adam(lr=learning_rate, decay=0)
     
-    decay_rate = learning_rate / nb_epochs
-    sgd = optimizers.Adam(lr = learning_rate)
-    my_optimizer = sgd # modif 2
     model.compile(loss='mean_squared_error',
                   optimizer=my_optimizer, metrics=['mae'])
-    
     
     
     
