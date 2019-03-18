@@ -1,155 +1,30 @@
-import sys
-import json
-import time
-import datetime
-import pandas as pd
 import numpy as np
-import os
+import pandas as pd
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras import optimizers
+from preprocessing import run_preproc
+from training import run_training
+from read_results_predict import predictKaggle, show_score
 
-# = = = = = = = = = = = = = = =
+
+q = 1.2
+p = np.random.uniform(min(q,1)-0.3, max(q,1)+0.3)
 
 is_GPU = True
-save_weights = True
-save_history = True
-    
+
+df_name = "unbiased_bigdoc"
+model_name = "test"
+
+run_preproc(df_name, N_train = 10000, test = False,
+            biased=False, p = None, q = None,
+            max_doc_size = 120, num_walks = 10, walk_length=15)
+
+run_training(df_name, model_name,
+                 batch_size = 80, my_patience = 2, is_GPU = is_GPU,
+                 activation = "linear", nb_epochs = 10, learning_rate = 0.01)
 
 
+#predictKaggle(df_name, model_name,
+#              activation = "linear", is_GPU = is_GPU)
 
 
-# = = = = = data loading = = = = =
-
-from sklearn.model_selection import train_test_split
-import GraphData as data
-from HAN import HAN
-
-
-docs, target = data.get_dataset("full_biased")
-X_train, X_test, y_train, y_test = train_test_split(docs, target, test_size=0.3)
-
-# = = = = = fitting the model on 4 targets = = = = =
-
-batch_size = 80
-my_patience = 4
-embeddings = data.get_embeddings()
-res = []
-T = 0 # Total time of execution (without cooldown)
-t0 = time.process_time()
-for tgt in range(4):
-    model = HAN(embeddings, docs.shape, is_GPU = True, activation = "linear")
-    
-    learning_rate = 0.01
-    nb_epochs = 10
-    momentum = 0.8
-    
-    
-    decay_rate = learning_rate / nb_epochs
-    sgd = optimizers.Adam(lr = learning_rate)
-    my_optimizer = sgd # modif 2
-    model.compile(loss='mean_squared_error',
-                  optimizer=my_optimizer, metrics=['mae'])
-    
-    
-    
-    
-    # = = = = = training = = = = =
-    
-    early_stopping = EarlyStopping(monitor='val_loss',
-                                   patience=my_patience,
-                                   mode='min')
-    
-    # save model corresponding to best epoch
-    checkpointer = ModelCheckpoint(filepath=os.path.join(data.data_path, 'model_' + str(tgt)), 
-                                   verbose=1, 
-                                   save_best_only=True,
-                                   save_weights_only=True)
-    
-    if save_weights:
-        my_callbacks = [early_stopping,checkpointer]
-    else:
-        my_callbacks = [early_stopping]
-    
-    model.fit(X_train, 
-              y_train[tgt],
-              batch_size = batch_size,
-              epochs = nb_epochs,
-              validation_data = (X_test,y_test[tgt]),
-              callbacks = my_callbacks)
-    
-    hist = model.history.history
-    res.append(min(hist["val_loss"]))
-
-    if save_history:
-        with open(os.path.join(data.data_path, 'model_history_' + str(tgt) + '.json'), 'w') as file:
-            json.dump(hist, file, sort_keys=False, indent=4)
-            
-    T = time.process_time() - t0
-    print("################ {} minutes spent...###########".format(round(T/60)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#l_rate, drop, batch_size, n_units = 0.777003, 0.327482, 139, 82
-#run(l_rate, drop, batch_size, n_units)
-#
-#
-#
-## = = = = = Randown Search = = = = =
-#
-#res = [] # Each run results container
-#T = 0 # Total time of execution (without cooldown)
-#for i_run in []:
-#    # Picking random parameters
-#    l_rate = np.random.uniform(0.01, 0.8)
-#    drop = np.random.uniform(0.2, 0.4)
-#    batch_size = int(np.random.uniform(40, 150))
-#    n_units = int(np.random.uniform(30, 90))
-#
-#    # Running the model and storing it
-#    t0 = time.time()
-#    print("########## RUN {} for : {} #############".format(i_run, (l_rate, drop, batch_size, n_units)))
-#    res = run(l_rate, drop, batch_size, n_units)
-#    t = time.time() - t0
-#    res = [l_rate, drop, batch_size, n_units, t] + res
-#    res.append(res)
-#
-#    # Saving the results at each step
-#    df = pd.DataFrame(res, columns = ["l_rate", "drop", "batch_size","n_units", "T", "target0", "target1", "target2", "target3"])
-#    df.to_csv("grid_search.csv")
-#    T += t
-#    print("################ {} minutes spent...###########".format(round(T/60)))
-#    time.sleep(300) # 5 minutes cooldown for the GPU
+show_score(model_name, df_name)
