@@ -3,28 +3,41 @@ import pandas as pd
 
 from preprocessing import run_preproc
 from training import run_training
-from read_results_predict import predictKaggle, show_score
+from scores_kaggle import predictKaggle
+
+import GraphData as data
 
 
-q = 1.2
-p = np.random.uniform(min(q,1)-0.3, max(q,1)+0.3)
 
+# Generation parameters
+df_name = "test"
+model_name = "test"
+run_Kaggle = False
 is_GPU = True
 
-df_name = "unbiased_bigdoc"
-model_name = "test"
 
-run_preproc(df_name, N_train = 10000, test = False,
-            biased=False, p = None, q = None,
-            max_doc_size = 120, num_walks = 10, walk_length=15)
+# Hyper-parameters
+# If not set it will use the default in the function
+# Thus it is incremented through the execution
+# It is very useful to track our hyper parameter through the execution
+#  and save it with its performance.
+params = {
+    "N_train" : 100 if not(run_Kaggle) else None,
+    "biased" : False,
+    "activation" : "linear",
+    "optimizer" : "adam",
+    "nb_epochs" : 1,
+}
 
-run_training(df_name, model_name,
-                 batch_size = 80, my_patience = 2, is_GPU = is_GPU,
-                 activation = "linear", nb_epochs = 10, learning_rate = 0.01)
 
 
-#predictKaggle(df_name, model_name,
-#              activation = "linear", is_GPU = is_GPU)
+params = run_preproc(df_name, test = run_Kaggle, params = params)
 
+params = run_training(df_name, model_name, is_GPU = is_GPU, params = params)
 
-show_score(model_name, df_name)
+if run_Kaggle:
+    predictKaggle(df_name, model_name, is_GPU = is_GPU, params = params)
+    
+
+perfs = data.get_perfs(params["train_id"])
+print(perfs)

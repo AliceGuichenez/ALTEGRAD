@@ -12,35 +12,24 @@ import GraphData as data
 from HAN import HAN
 
 
-
-
-# = = = = = TRAINING RESULTS = = = = = 
-def show_score(model_name, df_name):
-
-    for tgt in range(4):
-        
-        print('* * * * * * *',tgt,'* * * * * * *')
-        
-        history_file = os.path.join(data.data_path, "models/", "{}_{}_{}_history.json".format(model_name, df_name, tgt))
-        with open(history_file, 'r') as file:
-            hist = json.load(file)
-        
-        val_mse = hist['val_loss']
-        val_mae = hist['val_mean_absolute_error']
-        
-        min_val_mse = min(val_mse)
-        min_val_mae = min(val_mae)
-        
-        best_epoch = val_mse.index(min_val_mse) + 1
-        
-        print('best epoch:',best_epoch)
-        print('best val MSE',round(min_val_mse,3))
-        print('best val MAE',round(min_val_mae,3))
+def get_scores(hist):
+    ''' Return a dictionary of scores from an history of an epoch'''
+    val_mse = hist['val_loss']
+    val_mae = hist['val_mean_absolute_error']
+    
+    min_val_mse = min(val_mse)
+    min_val_mae = min(val_mae)
+    min_loss = min(hist['loss'])
+    
+    best_epoch = val_mse.index(min_val_mse) + 1
+    
+    return {"min_val_mse" : min_val_mse, "min_val_mae" : min_val_mae, "best_epoch" : best_epoch, "min_loss" : min_loss}
 
 
 
 # = = = = = PREDICTIONS = = = = =
-def predictKaggle(df_name, model_name, is_GPU = True, activation = "linear"):
+def predictKaggle(df_name, model_name, params, is_GPU = True):
+    '''Use the dataset and the model provided with the params to generate a Kaggle prediction'''
     docs = data.get_kaggle_docs(df_name) # Load the raw docs
     
     all_preds_han = []
@@ -50,7 +39,7 @@ def predictKaggle(df_name, model_name, is_GPU = True, activation = "linear"):
         
         
         embeddings = data.get_embeddings()
-        model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = activation)
+        model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = params["activation"], n_units=params["n_units"])
         model_file = os.path.join(data.data_path, "models/", "{}_{}_{}_model.h5".format(model_name, df_name, tgt))
         model.load_weights(model_file)
         all_preds_han.append(model.predict(docs).tolist())
