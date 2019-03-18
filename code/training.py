@@ -40,11 +40,7 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
     X_train, X_test, y_train, y_test = train_test_split(docs, target, test_size=0.3)
     params["split_id"] = random_id() # id to identify the split later
     
-    # = = = = = fitting the model on 4 targets = = = = =
-    
-    
-    T = 0 # Total time of execution (without cooldown)
-    t0 = time.process_time()
+    # = = = = = fitting the model on 4 targets = = = = #
     
     # Building the models
     embeddings = data.get_embeddings()
@@ -62,6 +58,7 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
     # Training for each target
     params["train_id"] = random_id()
     for tgt in range(4):
+        t0 = time.process_time()
         # = = = = = training = = = = =
         
         early_stopping = EarlyStopping(monitor='val_loss',
@@ -88,7 +85,7 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
         T = time.process_time() - t0
         hist = model.history.history
         scores = get_scores(hist)
-        scores["T"] = T
+        scores["T"] = time.process_time() - t0
         
         data.save_perf(params, scores, tgt)
         print("################ {} minutes spent...###########".format(round(T/60)))
