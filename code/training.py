@@ -19,7 +19,8 @@ from HAN import HAN
 
 def run_training(df_name, model_name,
                  batch_size = 80, my_patience = 2, is_GPU = True,
-                 activation = "linear", nb_epochs = 10, learning_rate = 0.01):
+                 activation = "linear", nb_epochs = 10, 
+                 optimizer = "adam", learning_rate = 0.01):
     
     docs, target = data.get_dataset(df_name)
     X_train, X_test, y_train, y_test = train_test_split(docs, target, test_size=0.3)
@@ -34,8 +35,13 @@ def run_training(df_name, model_name,
     # Building the models
     embeddings = data.get_embeddings()
     model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = activation)
-    sgd = optimizers.Adam(lr = learning_rate)
-    my_optimizer = sgd # modif 2
+    
+    if optimizer=='sgd':
+        decay_rate = learning_rate / nb_epochs
+        my_optimizer = optimizers.SGD(lr=learning_rate, decay=decay_rate, momentum=0.9, nesterov=True)
+    elif optimizer=='adam':
+        my_optimizer = optimizers.Adam(lr=learning_rate, decay=0)    
+        
     model.compile(loss='mean_squared_error',
                   optimizer=my_optimizer, metrics=['mae'])
 
