@@ -6,6 +6,8 @@ from keras.models import Model
 from keras.layers import Input, Embedding, Dropout, Bidirectional, GRU, CuDNNGRU, TimeDistributed, Dense
 from keras import optimizers
 
+is_GPU = False
+
 
 class HAN(keras.Model):
 

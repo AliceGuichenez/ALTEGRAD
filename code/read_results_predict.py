@@ -1,6 +1,4 @@
-import sys
 import json
-import numpy as np
 import os
 
 # = = = = = = = = = = = = = = =
@@ -32,7 +30,7 @@ for tgt in range(4):
 # = = = = = PREDICTIONS = = = = =     
 from HAN import HAN
 
-docs = data.get_kaggle_docs("full_biased") # Load the raw docs
+docs = data.get_kaggle_docs("1000_graphs_not_WL") # Load the raw docs
 
 all_preds_han = []
 for tgt in range(4):

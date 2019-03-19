@@ -35,6 +35,7 @@ def natural_keys(text):
 # Get the path of the data folder relative to this file      
 # No need to provide it for the user
 file_path = os.path.dirname(os.path.realpath(__file__))
+#data_path = '/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/for_kaggle_final/data/'
 data_path = os.path.join(file_path, "../data/")
 
 # Store the edgelist
@@ -150,7 +151,8 @@ def get_graphs(N_train = None, test = False):
     
 def get_docs_path(name):
     '''Return the path with an appriate name for the docs to be stored'''
-    return os.path.join(data_path, "datasets/docs_{}.pickle".format(name))
+    #return os.path.join(data_path, "datasets/docs_{}.pickle".format(name))
+    return os.path.join('/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/ALTEGRAD/data/',"datasets/docs_{}.pickle".format(name))
 
 
 def save_docs(idxs, docs, name):
