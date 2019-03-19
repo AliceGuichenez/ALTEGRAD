@@ -1,154 +1,44 @@
-import sys
-import json
-import time
-import datetime
-import pandas as pd
 import numpy as np
-import os
+import pandas as pd
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras import optimizers
+from preprocessing import run_preproc
+from training import run_training
+from scores_kaggle import predictKaggle
 
-# = = = = = = = = = = = = = = =
-
-is_GPU = True
-save_weights = True
-save_history = True
-    
-
-# = = = = = data loading = = = = =
-
-from sklearn.model_selection import train_test_split
 import GraphData as data
-from HAN import HAN
 
 
-docs, target = data.get_dataset("full_biased")
-X_train, X_test, y_train, y_test = train_test_split(docs, target, test_size=0.3)
 
-# = = = = = fitting the model on 4 targets = = = = =
+# Generation parameters
+df_name = "test"
+model_name = "test"
+run_Kaggle = True
+is_GPU = True
 
-batch_size = 80
-my_patience = 4
-embeddings = data.get_embeddings()
-res = []
-T = 0 # Total time of execution (without cooldown)
-t0 = time.process_time()
-for tgt in range(4):
-    model = HAN(embeddings, docs.shape, is_GPU = True, activation = "linear")
+
+# = = Hyper-parameters = = #
+# If not set it will use the default in the function
+# Thus it is incremented through the execution
+# It is very useful to track our hyper parameter through the execution
+#  and save it with its performance.
+params = {
+    "N_train" : 40000 if not(run_Kaggle) else None,
+    "biased" : False,
+    "activation" : "linear",
+    "optimizer" : "adam",
+    "nb_epochs" : 10,
+}
+
+for walk_length in [5]:
+    params["walk_length"] = walk_length
+
+    params = run_preproc(df_name, test = run_Kaggle, params = params)
     
-    learning_rate = 0.01
-    nb_epochs = 10
-    momentum = 0.8
-    optimizer = 'adam'
+    params = run_training(df_name, model_name, is_GPU = is_GPU, params = params)
     
-    if optimizer=='sgd':
-        decay_rate = learning_rate / nb_epochs
-        my_optimizer = optimizers.SGD(lr=learning_rate, decay=decay_rate, momentum=0.9, nesterov=True)
-    elif optimizer=='adam':
-        my_optimizer = optimizers.Adam(lr=learning_rate, decay=0)
+    if run_Kaggle:
+        predictKaggle(df_name, model_name, is_GPU = is_GPU, params = params)
+        
     
-    model.compile(loss='mean_squared_error',
-                  optimizer=my_optimizer, metrics=['mae'])
-    
-    
-    
-    # = = = = = training = = = = =
-    
-    early_stopping = EarlyStopping(monitor='val_loss',
-                                   patience=my_patience,
-                                   mode='min')
-    
-    # save model corresponding to best epoch
-    checkpointer = ModelCheckpoint(filepath=os.path.join(data.data_path, 'model_' + str(tgt)), 
-                                   verbose=1, 
-                                   save_best_only=True,
-                                   save_weights_only=True)
-    
-    if save_weights:
-        my_callbacks = [early_stopping,checkpointer]
-    else:
-        my_callbacks = [early_stopping]
-    
-    model.fit(X_train, 
-              y_train[tgt],
-              batch_size = batch_size,
-              epochs = nb_epochs,
-              validation_data = (X_test,y_test[tgt]),
-              callbacks = my_callbacks)
-    
-    hist = model.history.history
-    res.append(min(hist["val_loss"]))
-
-    if save_history:
-        with open(os.path.join(data.data_path, 'model_history_' + str(tgt) + '.json'), 'w') as file:
-            json.dump(hist, file, sort_keys=False, indent=4)
-            
-    T = time.process_time() - t0
-    print("################ {} minutes spent...###########".format(round(T/60)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#l_rate, drop, batch_size, n_units = 0.777003, 0.327482, 139, 82
-#run(l_rate, drop, batch_size, n_units)
-#
-#
-#
-## = = = = = Randown Search = = = = =
-#
-#res = [] # Each run results container
-#T = 0 # Total time of execution (without cooldown)
-#for i_run in []:
-#    # Picking random parameters
-#    l_rate = np.random.uniform(0.01, 0.8)
-#    drop = np.random.uniform(0.2, 0.4)
-#    batch_size = int(np.random.uniform(40, 150))
-#    n_units = int(np.random.uniform(30, 90))
-#
-#    # Running the model and storing it
-#    t0 = time.time()
-#    print("########## RUN {} for : {} #############".format(i_run, (l_rate, drop, batch_size, n_units)))
-#    res = run(l_rate, drop, batch_size, n_units)
-#    t = time.time() - t0
-#    res = [l_rate, drop, batch_size, n_units, t] + res
-#    res.append(res)
-#
-#    # Saving the results at each step
-#    df = pd.DataFrame(res, columns = ["l_rate", "drop", "batch_size","n_units", "T", "target0", "target1", "target2", "target3"])
-#    df.to_csv("grid_search.csv")
-#    T += t
-#    print("################ {} minutes spent...###########".format(round(T/60)))
-#    time.sleep(300) # 5 minutes cooldown for the GPU
+    perfs = data.get_perfs(params["train_id"])
+    print(perfs)
