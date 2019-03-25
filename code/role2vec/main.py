@@ -89,6 +89,7 @@ g_batch = None
 N_done = 0
 t0, T_start = time.process_time(), 0
 N_batch = 0
+skipped = 0
 for i, graph_path in enumerate(graphes):
     # Loading graph and adding it to the batch
     g = load_graph(graph_path)
@@ -98,6 +99,8 @@ for i, graph_path in enumerate(graphes):
             g_batch = g
         else:
             g_batch.add_edges_from(g.edges())
+    else:
+        skipped += 1
     
     # Compute embedding of the batch
     if (N_batch == batch_size or i + 1 == N_graphes) and N_batch > 0:
@@ -105,6 +108,7 @@ for i, graph_path in enumerate(graphes):
         print("####### Starting batch {}/{} #######".format((i+1)//batch_size, N_graphes//batch_size))
         print("\tBatch size : {}".format(N_batch))
         print("\tBatch number of nodes : {}".format(len(g_batch)))
+        print("\tTotal number of graphs skipped : {}".format(skipped))
         model = Role2Vec(args, graph = g_batch)
         print("\tRandom walks...")
         model.do_walks()
