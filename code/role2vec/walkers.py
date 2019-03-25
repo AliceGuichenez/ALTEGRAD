@@ -1,7 +1,6 @@
 import random
 import numpy as np
 import networkx as nx
-from tqdm import tqdm
 
 class SecondOrderRandomWalker:
     """

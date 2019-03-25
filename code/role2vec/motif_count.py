@@ -1,7 +1,6 @@
 import math
 import pandas as pd
 import networkx as nx
-from tqdm import tqdm
 from sklearn.cluster import KMeans
 from scipy.sparse import csr_matrix
 from sklearn.decomposition import NMF

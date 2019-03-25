@@ -1,6 +1,5 @@
 import hashlib
 import networkx as nx
-from tqdm import tqdm
 
 class WeisfeilerLehmanMachine:
     """

@@ -2,7 +2,6 @@ import math
 import numpy as np
 import pandas as pd
 import networkx as nx
-from tqdm import tqdm
 from gensim.models.doc2vec import Doc2Vec
 from role_utils import load_graph, create_documents
 from walkers import FirstOrderRandomWalker, SecondOrderRandomWalker
