@@ -36,7 +36,7 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
     params = merge_params(params, default_params)
     
     docs, target, params_data = data.get_dataset(df_name)
-    params = merge_params(params, params_data)
+    params = merge_params(params_data, params) # Force the parameters to be the one of the dataset
     X_train, X_test, y_train, y_test = train_test_split(docs, target, test_size=0.3)
     params["split_id"] = random_id() # id to identify the split later
     

@@ -7,18 +7,19 @@ from walks import generate_walks
 
 from utils import merge_params
 
+default_params = {
+    "max_doc_size" : 70,
+    "walk_length" : 10,
+    "num_walks" : 5,
+    "p" : None,
+    "q" : None,
+    "N_train" : None,
+    "biased" : False,
+}
+
 
 def run_preproc(df_name, test = False, pad_vec_idx = 1685894, params = None):
-    
-    default_params = {
-        "max_doc_size" : 70,
-        "walk_length" : 10,
-        "num_walks" : 5,
-        "p" : None,
-        "q" : None,
-        "N_train" : None,
-        "biased" : False,
-    }
+    global default_params
     params = merge_params(params, default_params)
     
     start_time = time() 

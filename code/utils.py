@@ -19,3 +19,11 @@ def random_id(N = 5):
     ''' Return a random string.
         Its usefull to identify a specific dataset or a generation even if it has the same parameter.'''
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
+
+
+def filter_dict(d, keys):
+    filtered = {}
+    for key in keys:
+        if key in d:
+            filtered[key] = d[key]
+    return filtered

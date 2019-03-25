@@ -7,12 +7,14 @@ from scores_kaggle import predictKaggle
 
 import GraphData as data
 
+import random, time
+
 
 
 # Generation parameters
 df_name = "test"
 model_name = "test"
-run_Kaggle = True
+run_Kaggle = False
 is_GPU = True
 
 
@@ -22,15 +24,17 @@ is_GPU = True
 # It is very useful to track our hyper parameter through the execution
 #  and save it with its performance.
 params = {
-    "N_train" : 40000 if not(run_Kaggle) else None,
-    "biased" : False,
+    "N_train" : 60000 if not(run_Kaggle) else None,
+    "biased" : True,
     "activation" : "linear",
     "optimizer" : "adam",
     "nb_epochs" : 10,
 }
 
-for walk_length in [5]:
-    params["walk_length"] = walk_length
+for i in range(60):
+    print("#### RUN {} ####".format(i+1))
+    params["p"] = random.uniform(0.5,1.5)
+    params["q"] = random.uniform(0.5,1.5)
 
     params = run_preproc(df_name, test = run_Kaggle, params = params)
     
@@ -42,3 +46,5 @@ for walk_length in [5]:
     
     perfs = data.get_perfs(params["train_id"])
     print(perfs)
+    
+    time.sleep(30) # Cooldown

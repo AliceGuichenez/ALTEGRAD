@@ -155,11 +155,15 @@ def get_docs_path(name):
     return os.path.join(data_path, "datasets/docs_{}.pickle".format(name))
 
 
+from utils import filter_dict
+import preprocessing as prec
+
 def save_docs(idxs, docs, params, name):
     '''Save the idxs, docs with pickle.
        Then you can load it again by using get_docs with name'''
     docs = np.array(docs).astype(np.int)
     idxs = np.array(idxs).astype(np.int)
+    params = filter_dict(params, prec.default_params.keys()) # only save parameters relevant to the preproc
     params["docs_id"] = random_id()
     file_path = get_docs_path(name)
     file = open(file_path, "wb" )
@@ -167,6 +171,7 @@ def save_docs(idxs, docs, params, name):
     file.close()
 
         
+
 def get_docs(name):
     '''Load (idxs, docs) from the pickle named name'''
     file_path = get_docs_path(name)
