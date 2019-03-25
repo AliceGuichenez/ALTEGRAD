@@ -86,10 +86,8 @@ embs = np.load(embs_file) if os.path.isfile(embs_file) else np.zeros((1685894, d
 graphes = edgelists[graphs_i:graphs_j+1]
 N_graphes = len(graphes)
 g_batch = None
-N_done = 0
-t0, T_start = time.process_time(), 0
-N_batch = 0
-skipped = 0
+N_done, N_batch, skipped = 0, 0, 0
+t0, T_start = time.process_time(), time.process_time()
 for i, graph_path in enumerate(graphes):
     # Loading graph and adding it to the batch
     g = load_graph(graph_path)
