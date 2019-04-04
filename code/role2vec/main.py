@@ -20,7 +20,7 @@ def natural_keys(text):
 # CHANGE THE PARTITION HERE :)
 #
 ##############################
-graphs_i, graphs_j = 0, 35000 # Nicolas
+graphs_i, graphs_j = 0, 100000 # Nicolas
 #graphs_i, graphs_j = 35001, 70000 # Robin
 #graphs_i, graphs_j = 70001, 100000 # Alice
 
@@ -29,8 +29,8 @@ graphs_i, graphs_j = 0, 35000 # Nicolas
 
 
 # Parameters
-dim = 20
-batch_size = 200 # max 300 for memory
+dim = 30 # Dimension of the embedding
+batch_size = 300 # The number of graph saved together
 
 
 print("####### WORKING ON PARTITION FROM {} TO {} #######".format(graphs_i, graphs_j))
@@ -38,13 +38,12 @@ print("####### WORKING ON PARTITION FROM {} TO {} #######".format(graphs_i, grap
 
 # Arguments for the embeddings
 args_default = {
-    "sampling" : "first",
+    "sampling" : "second",
     
     "window_size" : 5,
-    "walk_number" : 10,
-    "walk_length" : 80,
-    "sampling" : "first",
-    "P" : 1,
+    "walk_number" : 5,
+    "walk_length" : 10,
+    "P" : 0.67,
     "Q" : 1,
     
     "dimensions" : dim,
@@ -70,7 +69,7 @@ args = namedtuple("args", args_default.keys())(*args_default.values())
 
 
 
-# Fetching all graphes
+#Fetching all graphes
 file_path = os.path.dirname(os.path.realpath(__file__))
 data_path = os.path.join(file_path, "../../data/")
 edges_path = os.path.join(data_path, 'edge_lists/')
@@ -80,67 +79,48 @@ edgelists = [edges_path + edge for edge in edgelists]
 
 
 
-embs_file = "embs_{}.npy".format(dim)
-embs = np.load(embs_file) if os.path.isfile(embs_file) else np.zeros((1685894, dim))
+embs_file = "embs_{}_v3.npy".format(dim)
+print(os.path.isfile(embs_file))
+embs = np.load(embs_file) if os.path.isfile(embs_file) else np.zeros((1685895, dim))
 
 graphes = edgelists[graphs_i:graphs_j+1]
 N_graphes = len(graphes)
 g_batch = None
 N_done, N_batch, skipped = 0, 0, 0
-t0, T_start = time.process_time(), time.process_time()
+t_start = time.process_time()
+graphes = graphes[:1]
 for i, graph_path in enumerate(graphes):
     # Loading graph and adding it to the batch
     g = load_graph(graph_path)
-    if (embs[int(list(g.nodes())[0])][0] == 0): # Not already computed then skip
-        N_batch += 1
-        if g_batch is None:
-            g_batch = g
-        else:
-            g_batch.add_edges_from(g.edges())
-    else:
-        skipped += 1
+    if (np.abs(embs[int(list(g.nodes())[0])]).sum() > 0):
+        continue
     
-    # Compute embedding of the batch
-    if (N_batch == batch_size or i + 1 == N_graphes) and N_batch > 0:
-        N_done += N_batch
-        print("####### Starting batch {}/{} #######".format((i+1)//batch_size, N_graphes//batch_size))
-        print("\tBatch size : {}".format(N_batch))
-        print("\tBatch number of nodes : {}".format(len(g_batch)))
-        print("\tTotal number of graphs skipped : {}".format(skipped))
-        model = Role2Vec(args, graph = g_batch)
-        print("\tRandom walks...")
-        model.do_walks()
-        print("\tStructural features...")
-        model.create_structural_features()
-        print("\tLearning embedding...")
-        model.learn_embedding()
-        
-        idxs = [int(i) for i in model.graph.nodes]
-        embs[idxs, :] = model.embedding
-        print("\tSaving...")
-        np.save(embs_file, embs) # saving
-        
-        T = time.process_time() - t0
-        v = round(T/N_batch, 2)
-        T_tot = time.process_time() - T_start
+    
+    # Compute embedding of the graph
+    model = Role2Vec(args, graph = g)
+    model.do_walks()
+    model.create_structural_features()
+    model.learn_embedding()
+    idxs = [int(i) for i in model.graph.nodes()]
+    embs[idxs, :] = model.embedding
+    N_batch += 1
+    N_done += 1
+    
+    if (N_batch == batch_size or i + 1 == N_graphes) and N_batch > 0:    
+        np.save(embs_file, embs) # saving 
+        T_tot = time.process_time() - t_start
         v_mean = T_tot/N_done
         T_estimated = int(round((v_mean*(N_graphes - i - 1))/60))
-        T = round(T)
-        
-        # Reset parameters
-        g_batch = None
+        print("####### Done until {} with speed {} s/graph #######".format(graphs_i + i, v_mean))
+        print("####### Running since {} minutes still {} minutes to go. #######\n\n".format(int(T_tot/60), T_estimated))
         N_batch = 0
-        t0 = time.process_time()
         
-        print("####### Done until {} in {} seconds with speed {} s/graph #######".format(graphs_i + i, T, v))
-        print("####### Running since {} minutes still {} minutes to go ({} s/graph). #######\n\n".format(int(T_tot/60), T_estimated, round(v_mean, 3)))
+    # Reset parameters
+    t0 = time.process_time()
+    
     
           
-T_tot = time.process_time() - T_start                      
+T_tot = time.process_time() - t_start                      
 print("######## YOU HAVE FINISHED WELL DONE AFTER {} minutes !! #######".format(int(T_tot/60)))
 print("####### PARTITION FROM {} TO {} IS DONE !! #######".format(graphs_i, graphs_j))
-              
-              
-
-              
     

@@ -99,7 +99,7 @@ def get_dataset(name):
 def get_kaggle_docs(name):
     idxs, docs, params = get_docs(name) # Load the raw docs
     idxs, docs = remove_idxs(idxs, docs, get_train_idxs()) # Remove the test docs as we do not have the target for them
-    return docs[np.argsort(idxs), :, :] # Sorting to get the Kaggle order
+    return docs[np.argsort(idxs), :, :], params # Sorting to get the Kaggle order
     
 
 def get_target(idxs = None):
@@ -116,9 +116,16 @@ def get_target(idxs = None):
     return target_train if idxs is None else target_train.loc[idxs]
     
 
-def get_embeddings():
+def get_embeddings(roll2vec = False, multiplier = 1):
     '''Return the embeddings data'''
-    return np.load(data_path + 'embeddings.npy')
+    embs = np.load(data_path + 'embeddings.npy')
+    if roll2vec:
+        embs_roll2vec = np.load(data_path + 'embs_50_v2.npy')
+        embs = np.column_stack((embs, embs_roll2vec))
+    res = embs
+    for _ in range(multiplier- 1):
+        res = np.column_stack((res, embs))
+    return res
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 #
@@ -153,8 +160,7 @@ def get_graphs(N_train = None, test = False):
     
 def get_docs_path(name):
     '''Return the path with an appriate name for the docs to be stored'''
-    #return os.path.join(data_path, "datasets/docs_{}.pickle".format(name))
-    return os.path.join('/Users/aliceguichenez/Documents/Ecoles/Master_X/S1/ALTEGRAD/Challenge/ALTEGRAD/data/',"datasets/docs_{}.pickle".format(name))
+    return os.path.join(data_path, "datasets/docs_{}.pickle".format(name))
 
 
 from utils import filter_dict
@@ -197,7 +203,7 @@ def save_perf(params, scores, tgt):
     
     # Saving to the other performance
     perfs = get_perfs()
-    perfs = perfs.append(new_perf, ignore_index = True)
+    perfs = perfs.append(new_perf, ignore_index = True, sort=True)
     perfs.to_csv(get_perf_path(), index = False)
     
     return new_perf

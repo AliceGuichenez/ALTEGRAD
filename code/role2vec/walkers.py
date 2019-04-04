@@ -16,7 +16,7 @@ class SecondOrderRandomWalker:
         """
         self.G = G
         self.nodes = nx.nodes(self.G)
-        print("Edge weighting.\n")
+        #print("Edge weighting.\n")
         for edge in self.G.edges():
             self.G[edge[0]][edge[1]]['weight'] = 1.0
             self.G[edge[1]][edge[0]]['weight'] = 1.0
@@ -93,8 +93,8 @@ class SecondOrderRandomWalker:
         G = self.G
 
         alias_nodes = {}
-        print("")
-        print("Preprocesing.\n")
+        #print("")
+        #print("Preprocesing.\n")
         for node in G.nodes():
              unnormalized_probs = [G[node][nbr]['weight'] for nbr in sorted(G.neighbors(node))]
              norm_const = sum(unnormalized_probs)

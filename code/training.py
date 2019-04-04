@@ -32,6 +32,11 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
         "activation" : "linear",
         "drop_rate" : 0.3,
         "n_units" : 50,
+        "roll2vec" : True,
+        "embs_multiplier" : 1,
+        "multi_dense" : True,
+        "dense_acti" : "linear",
+        "full_pred" : True,
     }
     params = merge_params(params, default_params)
     
@@ -43,21 +48,27 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
     # = = = = = fitting the model on 4 targets = = = = #
     
     # Building the models
-    embeddings = data.get_embeddings()
-    model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = params["activation"], drop_rate=params["drop_rate"], n_units=params["n_units"])
+    embeddings = data.get_embeddings(roll2vec = params["roll2vec"], multiplier = params["embs_multiplier"])
+    print("### EMBS SHAPE : {} ###".format(embeddings.shape))
+    model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = params["activation"],
+                drop_rate=params["drop_rate"], n_units=params["n_units"],
+                multi_dense = params["multi_dense"], dense_acti = params["dense_acti"], full_pred = params["full_pred"])
     
     if params["optimizer"]=='sgd':
         decay_rate = params["learning_rate"] / params["nb_epochs"]
         my_optimizer = optimizers.SGD(lr=params["learning_rate"], decay=decay_rate, momentum=params["momentum"], nesterov=params["nesterov"])
     elif params["optimizer"]=='adam':
-        my_optimizer = optimizers.Adam(lr=params["learning_rate"], decay=0)    
+        my_optimizer = optimizers.Adam()    
+    elif params["optimizer"]=='nadam':
+        my_optimizer = optimizers.Nadam()
         
     model.compile(loss='mean_squared_error',
                   optimizer=my_optimizer, metrics=['mae'])
 
     # Training for each target
     params["train_id"] = random_id()
-    for tgt in range(4):
+    n_target = 1 if params["full_pred"] else 4
+    for tgt in range(n_target):
         t0 = time.process_time()
         # = = = = = training = = = = =
         
@@ -66,6 +77,7 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
                                        mode='min')
         
         # save model corresponding to best epoch
+        if params["full_pred"]: tgt = "full"
         model_file = os.path.join(data.data_path, "models/", "{}_{}_{}_model.h5".format(model_name, df_name, tgt))
         checkpointer = ModelCheckpoint(filepath=model_file, 
                                        verbose=1, 
@@ -74,11 +86,13 @@ def run_training(df_name, model_name, is_GPU = True, params = None):
         
         my_callbacks = [early_stopping,checkpointer]
         
+        y_train_tgt = y_train if params["full_pred"] else y_train[tgt]
+        y_test_tgt = y_test if params["full_pred"] else y_test[tgt]
         model.fit(X_train, 
-                  y_train[tgt],
+                  y_train_tgt,
                   batch_size = params["batch_size"],
                   epochs = params["nb_epochs"],
-                  validation_data = (X_test,y_test[tgt]),
+                  validation_data = (X_test,y_test_tgt),
                   callbacks = my_callbacks)
         
         

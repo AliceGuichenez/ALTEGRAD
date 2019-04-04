@@ -2,7 +2,7 @@ import sys
 import json
 import numpy as np
 import os
-
+from utils import merge_params
 from keras.models import load_model
 
 # = = = = = = = = = = = = = = =
@@ -30,16 +30,24 @@ def get_scores(hist):
 # = = = = = PREDICTIONS = = = = =
 def predictKaggle(df_name, model_name, params, is_GPU = True):
     '''Use the dataset and the model provided with the params to generate a Kaggle prediction'''
-    docs = data.get_kaggle_docs(df_name) # Load the raw docs
+    docs, params_data = data.get_kaggle_docs(df_name) # Load the raw docs
+    params = merge_params(params_data, params) # Force the parameters to be the one of the dataset
     
     all_preds_han = []
-    for tgt in range(4):
+    n_target = 1 if params["full_pred"] else 4
+    for tgt in range(n_target):
         
         print('* * * * * * *',tgt,'* * * * * * *')
         
         
-        embeddings = data.get_embeddings()
-        model = HAN(embeddings, docs.shape, is_GPU = is_GPU, activation = params["activation"], n_units=params["n_units"])
+        embeddings = data.get_embeddings(roll2vec = params["roll2vec"], multiplier = params["embs_multiplier"])
+        
+        model = HAN(embeddings, docs.shape,
+                is_GPU = is_GPU, activation = params["activation"],
+                drop_rate=params["drop_rate"], n_units=params["n_units"],
+                multi_dense = params["multi_dense"], dense_acti = params["dense_acti"], full_pred = params["full_pred"])
+        
+        if params["full_pred"]: tgt = "full"
         model_file = os.path.join(data.data_path, "models/", "{}_{}_{}_model.h5".format(model_name, df_name, tgt))
         model.load_weights(model_file)
         all_preds_han.append(model.predict(docs).tolist())

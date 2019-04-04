@@ -8,6 +8,8 @@ from scores_kaggle import predictKaggle
 import GraphData as data
 
 import random, time
+from utils import random_id
+
 
 
 
@@ -24,17 +26,22 @@ is_GPU = True
 # It is very useful to track our hyper parameter through the execution
 #  and save it with its performance.
 params = {
-    "N_train" : 60000 if not(run_Kaggle) else None,
+    "N_train" : 50000 if not(run_Kaggle) else None,
     "biased" : True,
     "activation" : "linear",
     "optimizer" : "adam",
     "nb_epochs" : 10,
+    "roll2vec" : False,
+    "embs_multiplier" : 3,
+    "drop_rate" : 0.1,
+    "multi_dense" : True,
+    "dense_acti" : "linear",
+    "my_patience" : 4,
+    "full_pred" : False,
 }
 
-for i in range(60):
+for i in range(1):
     print("#### RUN {} ####".format(i+1))
-    params["p"] = random.uniform(0.5,1.5)
-    params["q"] = random.uniform(0.5,1.5)
 
     params = run_preproc(df_name, test = run_Kaggle, params = params)
     
