@@ -10,8 +10,8 @@ Find the best HAN architecture in order to predict four continuous targets from 
 ## Improvements from the baseline model
 - Activation function turned to linear
 - Biased random walks (brought no improvements)
-- Number of random walks
-- Length of random walks
+- Tuning of the number of random walks per node
+- Tuning of the length of walks
 - Enriching nodes attributes through Weisfeiler-Lehman procedure
 - Change optimizer for momentum SGD (brought no improvements)
 - Hyper-parameters tuning: batch size, dropout rate, learning rate and patience
