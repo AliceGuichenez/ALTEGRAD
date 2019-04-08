@@ -4,7 +4,7 @@ Data challenge: predict continuous values associated with graphs
 ## Motivation
 Find the best HAN architecture in order to predict four continuous targets from graphs
 
-![graph]
+![Graph_pic](./img/graph.png)
 
 
 ## Improvements from the baseline model
