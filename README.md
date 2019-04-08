@@ -28,7 +28,8 @@ Data Folder:
   - Empty folders to fill in with the data
 
 ## How to use it
-Data have not been uploaded in the Repositories (for confidentiality and storage size reasons)
+Data have not been uploaded in the Repositories (for confidentiality and storage size reasons).
+
 Hence, in order to reproduce our results:
 - Clone our [repository](https://github.com/AliceGuichenez/ALTEGRAD)
 - Place the data in the data folder
