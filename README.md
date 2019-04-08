@@ -20,12 +20,12 @@ Find the best HAN architecture in order to predict four continuous targets from 
 
 ## Organisation of the folders
 Code folder:
-  Model utility files
-  2 notebooks presenting descriptive statistics and some hyper-parameters tuning
-  Role2Vec folder: Personalized Role2Vec library files
+  - Model utility files
+  - 2 notebooks presenting descriptive statistics and some hyper-parameters tuning
+  - Role2Vec folder: Personalized Role2Vec library files
 
 Data Folder:
-  Empty folders to fill in with the data
+  - Empty folders to fill in with the data
 
 ## How to use it
 Data have not been uploaded in the Repositories (for confidentiality and storage size reasons)
